@@ -3,48 +3,55 @@ import { TMoviesPagination, TMoviesResponse } from "../interfaces/movies.interfa
 import { Movie } from "../entities"
 import { AppDataSource } from "../data-source"
 import { moviesSchemasResponse } from "../schemas/movies.schemas"
+import { Request } from "express"
 
 
 
-const listMoviesService = async (page: number | undefined, perPage: number | undefined, order: string = 'asc', sort: string = 'id'): Promise<TMoviesPagination> =>{
+const listMoviesService = async ( req:Request): Promise<TMoviesPagination> =>{
 
     const moviesRepository: Repository<Movie> = AppDataSource.getRepository(Movie)
 
-    let movies: Movie[] | undefined
+    let page: number = Number(req.query.page) || 1
+    let order: string = req.query.order === "DESC" || req.query.order === "desc" ? req.query.order.toUpperCase() : "ASC"
+    let sort:string = String(req.query.sort) || 'id'
+    let perPage: number = Number(req.query.perPage) || 5
+    let movies: Movie[] 
     let count: number = 0
     let prevPage: string | null = null
 
-   
-    const validPage = Number.isInteger(page) && page! > 0 ? page : 1
-
     
-    const validPerPage = Number.isInteger(perPage) && perPage! > 0 && perPage! <= 5 ? perPage : 5
+      if(perPage < 1 || perPage > 5 || perPage < 0) {perPage = 5}
+      if (page < 1 || page < 0) {page = 1}
+      if (sort !== "price" && sort !== "duration") {sort = "id"; order = "ASC"}
 
-    if(validPage && validPerPage){
-        const skip = (validPage-1) * validPerPage
+      
         movies = await moviesRepository.find({
-            skip,
-            take: validPerPage,
+            skip:perPage * (page - 1),
+            take: perPage,
             order: {
-                [sort]: order.toLowerCase() === 'desc' ? 'DESC' : 'ASC' 
+                [sort]: order
             }
         })
+        
         count = await moviesRepository.count()
-        prevPage = validPage > 1 ? `/movies?page=${validPage - 1}&perPage=${validPerPage}&order=${order}&sort=${sort}` : null
-    } else {
-        movies = await moviesRepository.find()
-        count = await moviesRepository.count()
-    }
+        prevPage = page === 1 ? null: `http://localhost:3000/movies?page=${page - 1}&perPage=${perPage}` 
 
     const returnMovies: TMoviesResponse = moviesSchemasResponse.parse(movies)
 
+    let newNextPage: string | null = `http://localhost:3000/movies?page=${page + 1}&perPage=${perPage}` || null
+        if(movies.length < perPage) {
+        newNextPage = null;
+        }
+
     return {
-        page: validPage || null,
-        perPage: validPerPage || null,
+        
         prevPage,
-        nextPage: validPage && validPerPage && count > validPage * validPerPage ? `/movies?page=${validPage + 1}&perPage=${validPerPage}&order=${order}&sort=${sort}` : null,
+        nextPage:  newNextPage,
         count,
-        data: returnMovies
+        data: [...returnMovies]
     }
 }
+
+
+
 export default listMoviesService

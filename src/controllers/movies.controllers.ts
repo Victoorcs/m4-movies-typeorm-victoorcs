@@ -17,9 +17,9 @@ const createMoviesController = async (req:Request, res:Response): Promise<Respon
 
 const listMoviesController = async (req: Request, res: Response) => {
 
-    const { page, perPage, order, sort } = req.query
+    
 
-    const movies = await listMoviesService(Number(page), Number(perPage), String(order), String(sort))
+    const movies = await listMoviesService(req)
 
     return res.status(200).json(movies)
 }

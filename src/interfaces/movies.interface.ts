@@ -9,8 +9,7 @@ type TMoviesRequest = z.infer<typeof movieSchemaRequest>
 type TMoviesResponse = z.infer<typeof moviesSchemasResponse>
 
 type TMoviesPagination = {
-    page:number | null | undefined
-    perPage:number| null | undefined
+  
     prevPage: string | null;
     nextPage: string | null;
     count: number;
